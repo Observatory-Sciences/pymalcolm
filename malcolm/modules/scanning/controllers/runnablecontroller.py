@@ -37,7 +37,7 @@ from ..hooks import (
     ValidateHook,
 )
 from ..infos import ConfigureParamsInfo, ParameterTweakInfo, RunProgressInfo
-from ..util import AGenerator, ConfigureParams, RunnableStates
+from ..util import AGenerator, ConfigureParams, RunnableStates, resolve_generator_tweaks
 
 PartContextParams = Iterable[Tuple[Part, Context, Dict[str, Any]]]
 PartConfigureParams = Dict[Part, ConfigureParamsInfo]
@@ -399,7 +399,7 @@ class RunnableController(builtin.controllers.ManagerController):
         generator: AGenerator,
         axesToMove: AAxesToMove = None,
         breakpoints: ABreakpoints = None,
-        **kwargs: Any
+        **kwargs: Any,
     ) -> AConfigureParams:
         """Validate configuration parameters and return validated parameters.
 
@@ -429,12 +429,30 @@ class RunnableController(builtin.controllers.ManagerController):
                 validate_part_info
             )
             if tweaks:
+                # Check if we need to resolve generator tweaks first
+                generator_tweaks: List[ParameterTweakInfo] = []
                 for tweak in tweaks:
+                    # Collect all generator tweaks
+                    if tweak.parameter == "generator":
+                        generator_tweaks.append(tweak)
+                if len(generator_tweaks) > 0:
+                    # Resolve multiple tweaks to the generator
+                    generator_tweak = resolve_generator_tweaks(generator_tweaks)
                     deserialized = self._block.configure.meta.takes.elements[
-                        tweak.parameter
-                    ].validate(tweak.value)
-                    setattr(params, tweak.parameter, deserialized)
-                    self.log.debug(f"Tweaking {tweak.parameter} to {deserialized}")
+                        generator_tweak.parameter
+                    ].validate(generator_tweak.value)
+                    setattr(params, generator_tweak.parameter, deserialized)
+                    self.log.debug(f"{self.mri}: tweaking generator to {deserialized}")
+                else:
+                    # Other tweaks can be applied at the same time
+                    for tweak in tweaks:
+                        deserialized = self._block.configure.meta.takes.elements[
+                            tweak.parameter
+                        ].validate(tweak.value)
+                        setattr(params, tweak.parameter, deserialized)
+                        self.log.debug(
+                            f"{self.mri}: tweaking {tweak.parameter} to {deserialized}"
+                        )
             else:
                 # Consistent set, just return the params
                 return params
@@ -457,7 +475,7 @@ class RunnableController(builtin.controllers.ManagerController):
         generator: AGenerator,
         axesToMove: AAxesToMove = None,
         breakpoints: ABreakpoints = None,
-        **kwargs: Any
+        **kwargs: Any,
     ) -> AConfigureParams:
         """Validate the params then configure the device ready for run().
 
