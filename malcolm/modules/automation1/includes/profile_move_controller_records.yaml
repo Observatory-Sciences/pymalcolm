@@ -1,0 +1,60 @@
+- builtin.parameters.string:
+    name: pv_prefix
+    description: The root PV for the trajectory scan template
+
+- ca.parts.CAActionPart:
+    name: buildProfile
+    description: command to build the profile once prositions are set
+    pv: $(pv_prefix)Build
+    status_pv: $(pv_prefix)BuildStatus
+    message_pv: $(pv_prefix)BuildMessage
+    good_status: Success
+
+- ca.parts.CACharArrayPart:
+    name: buildMessage
+    description: message of last profile build
+    rbv: $(pv_prefix)BuildMessage
+
+- ca.parts.CAActionPart:
+    name: readbackPositions
+    description: readback positions from the controler
+    pv: $(pv_prefix)Readback
+    status_pv: $(pv_prefix)ReadbackStatus
+    message_pv: $(pv_prefix)ReadbackMessage
+    good_status: Success
+
+- ca.parts.CAActionPart:
+    name: executeProfile
+    description: execute the built profile
+    pv: $(pv_prefix)Execute
+    status_pv: $(pv_prefix)ExecuteStatus
+    message_pv: $(pv_prefix)ExecuteMessage
+    good_status: Success
+
+- ca.parts.CALongPart:
+    name: numAxes
+    description: Number of axes in scan
+    pv: $(pv_prefix)NumAxes
+
+- ca.parts.CALongPart:
+    name: numPoints
+    description: Number of points in scan
+    pv: $(pv_prefix)NumPoints
+
+- ca.parts.CALongPart:
+    name: currentPoint
+    description: Current point in scan
+    rbv: $(pv_prefix)CurrentPoint
+
+- ca.parts.CADoubleArrayPart:
+    name: timeArray
+    description: time slices for each step in the profile
+    pv: $(pv_prefix)Times
+    config: False
+
+- ca.parts.CADoublePart:
+    name: fixedTime
+    description: fixed time step
+    pv: $(pv_prefix)FixedTime
+    config: False
+

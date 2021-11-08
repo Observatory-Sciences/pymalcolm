@@ -1,0 +1,19 @@
+- builtin.parameters.string:
+    name: mri_prefix
+    description: Malcolm resource id of the Block
+
+- builtin.parameters.string:
+    name: pv_prefix
+    description: the root PV for the trajectory scan template
+
+- automation1.blocks.auto_trajectory_block:
+    mri: $(mri_prefix):TRAJ
+    pv_prefix: $(pv_prefix)
+
+- automation1.parts.AutoTrajectoryPart:
+    name: trajectory
+    mri: $(mri_prefix):TRAJ
+
+# TODO(tri): Find this icon!
+# - builtin.parts.IconPart:
+#     svg: $(yamldir)/../icons/aerotech.svg

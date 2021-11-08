@@ -1,0 +1,37 @@
+- builtin.parameters.string:
+    name: mri
+    description: Malcolm resource id of the Block
+
+# TODO(tri):  Produce this trjactory scan template.  It seems
+# that DLS have their own template for this sort of thing which works
+# slightly differently to the default profileMove motor templates
+# (I think).
+- builtin.parameters.string:
+    name: pv_prefix
+    description: The root PV for the trajectory scan template
+
+- builtin.defines.docstring:
+    value: Hardware block corresponding to PVs used for trajectory scan
+
+- builtin.controllers.StatefulController:
+    mri: $(mri)
+    description: $(docstring)
+
+- automation1.includes.profile_move_controller_records:
+    pv_prefix: $(pv_prefix)
+
+- automation1.includes.profile_move_axis_records:
+    name: X
+    pv_prefix: $(pv_prefix)M1
+
+- automation1.includes.profile_move_axis_records:
+    name: Y
+    pv_prefix: $(pv_prefix)M2
+
+- automation1.includes.profile_move_axis_records:
+    name: Z
+    pv_prefix: $(pv_prefix)M3
+
+- automation1.includes.profile_move_axis_records:
+    name: U
+    pv_prefix: $(pv_prefix)M4

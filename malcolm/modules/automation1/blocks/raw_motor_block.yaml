@@ -1,0 +1,13 @@
+- builtin.parameters.string:
+    name: mri
+    description: Malcolm resource id of the Block
+
+- builtin.parameters.string:
+    name: pv_prefix
+    description: The root PV for the motor record
+
+- builtin.controllers.StatefulController:
+    mri: $(mri)
+
+- automation1.includes.motor_records:
+    pv_prefix: $(pv_prefix)

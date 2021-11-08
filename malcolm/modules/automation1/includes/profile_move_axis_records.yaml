@@ -1,0 +1,28 @@
+- builtin.parameters.string:
+    name: name
+    description: Name of the axis
+
+- automation1.defines.to_lower:
+    name: name_lower
+    value: $(name)
+
+- builtin.parameters.string:
+    name: pv_prefix
+    description: The PV prefix for the profile move axis
+
+- ca.parts.CAChoicePart:
+    name: use$(name)Axis
+    description: is the $(name) axis is used in the trajectory scan? yes/no
+    pv: $(pv_prefix)UseAxis
+
+- ca.parts.CADoubleArrayPart:
+    name: $(name_lower)Positions
+    description: a list of positions for the $(name) axis
+    pv: $(pv_prefix)Positions
+    config: False
+
+- ca.parts.CADoubleArrayPart:
+    name: $(name_lower)Readbacks
+    description: a list of readback positions for the $(name) axis
+    pv: $(pv_prefix)Readbacks
+    config: False
