@@ -1,8 +1,9 @@
 import numpy as np
-from annotypes import Anno, Array, add_call_types
+
+from annotypes import Anno, Union, Array, Sequence, add_call_types
 
 from malcolm.modules import builtin, scanning
-from malcolm.core import PartRegistrar
+from malcolm.core import PartRegistrar, Table
 
 APartName = builtin.parts.APartName
 AMri = builtin.parts.AMri
@@ -11,6 +12,19 @@ with Anno("The position the axis should be at for each point in the scan"):
     ADemandTrajectory = Array[np.float64]
 with Anno("The fixed timestep between points"):
     ATimeStep = np.float64
+with Anno("A position array"):
+    APosArray = Union[Array[float]]
+
+UPosArray = Union[APosArray, Sequence[float]]
+
+class PositionTable(Table):
+    def __init__(self, x: UPosArray, y: UPosArray):
+        self.x = APosArray(x)
+        self.y = APosArray(y)
+
+with Anno("The readback positions"):
+    APosTable = PositionTable
+
 
 class AutoTrajectoryPart(builtin.parts.ChildPart):
     def __init__(
@@ -29,6 +43,9 @@ class AutoTrajectoryPart(builtin.parts.ChildPart):
         )
         registrar.add_method_model(
             self.execute_profile, "executeProfile", needs_context=True
+        )
+        registrar.add_method_model(
+            self.readback_positions, "readbackPositions", needs_context=True
         )
         registrar.add_method_model(
             self.abort_profile, "abortProfile", needs_context=True
@@ -70,6 +87,13 @@ class AutoTrajectoryPart(builtin.parts.ChildPart):
         # TODO(tri): How do we determine if the scan has finished?
         context.sleep(self.total_time)
 
+    @add_call_types
+    def readback_positions(self, context: builtin.hooks.AContext) -> APosTable:
+        child = context.block_view(self.mri)
+
+        child.readbackPositions()
+
+        return PositionTable(child.xReadbacks.value, child.yReadbacks.value)
 
     @add_call_types
     def abort_profile(self, context: builtin.hooks.AContext) -> None:
