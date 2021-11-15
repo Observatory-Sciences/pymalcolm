@@ -3,7 +3,14 @@ import numpy as np
 from annotypes import Anno, Union, Array, Sequence, add_call_types
 
 from malcolm.modules import builtin, scanning
-from malcolm.core import PartRegistrar, Table
+from malcolm.core import (
+    DEFAULT_TIMEOUT,
+    Display,
+    Table,
+    NumberMeta,
+    PartRegistrar,
+    Widget,
+)
 
 APartName = builtin.parts.APartName
 AMri = builtin.parts.AMri
@@ -33,7 +40,10 @@ class AutoTrajectoryPart(builtin.parts.ChildPart):
         mri: AMri,
     ) -> None:
         super().__init__(name, mri, initial_visibility=True)
-        self.total_time = 0
+        self.total_points = 0
+        self.points_scanned = NumberMeta(
+            "int32", "The number of points scanned", tags=[Widget.METER.tag()]
+        ).create_attribute_model(0)
 
     def setup(self, registrar: PartRegistrar) -> None:
         super().setup(registrar)
@@ -50,6 +60,8 @@ class AutoTrajectoryPart(builtin.parts.ChildPart):
         registrar.add_method_model(
             self.abort_profile, "abortProfile", needs_context=True
         )
+        # Add Attributes
+        registrar.add_attribute_model("pointsScanned", self.points_scanned)
 
     @add_call_types
     def write_profile(
@@ -63,12 +75,12 @@ class AutoTrajectoryPart(builtin.parts.ChildPart):
 
         assert len(x) == len(y), "Trajectories must have the same length"
 
-        numPoints = len(x)
-        self.total_time = numPoints * timeStep;
+        num_points = len(x)
+        self.total_points = num_points
 
         child.put_attribute_values({
             'numAxes': 2,
-            'numPoints': numPoints,
+            'numPoints': num_points,
             'fixedTime': timeStep,
             'xPositions': x,
             'useXAxis': True,
@@ -76,16 +88,22 @@ class AutoTrajectoryPart(builtin.parts.ChildPart):
             'useYAxis': True,
         })
 
+        self.points_scanned.meta.set_display(Display(limitHigh=num_points))
+
         child.buildProfile()
 
     @add_call_types
     def execute_profile(self, context: builtin.hooks.AContext) -> None:
         child = context.block_view(self.mri)
 
-        child.executeProfile()
-
-        # TODO(tri): How do we determine if the scan has finished?
-        context.sleep(self.total_time)
+        f1 = child.currentPoint.subscribe_value(self.points_scanned.set_value)
+        try:
+            child.executeProfile()
+            child.when_value_matches(
+                "currentPoint", self.total_points, timeout=DEFAULT_TIMEOUT
+            )
+        finally:
+            context.unsubscribe(f1)
 
     @add_call_types
     def readback_positions(self, context: builtin.hooks.AContext) -> APosTable:

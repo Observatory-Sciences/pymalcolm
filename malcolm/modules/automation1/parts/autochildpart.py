@@ -24,6 +24,14 @@ class AutoChildPart(builtin.parts.ChildPart):
 
         # TODO: Support pausing and resuming the scan
         registrar.hook(scanning.hooks.ConfigureHook, self.on_configure)
+        registrar.hook(
+            (
+                scanning.hooks.ConfigureHook,
+                scanning.hooks.PostRunArmedHook,
+                scanning.hooks.SeekHook,
+            ),
+            self.on_configure,
+        )
         registrar.hook(scanning.hooks.RunHook, self.on_run)
         registrar.hook(scanning.hooks.PostRunReadyHook, self.on_post_run)
 
@@ -60,7 +68,16 @@ class AutoChildPart(builtin.parts.ChildPart):
     @add_call_types
     def on_run(self, context: scanning.hooks.AContext) -> None:
         child = context.block_view(self.mri)
-        child.executeProfile()
+
+        future = child.pointsScanned.subscribe_value(self.update_step)
+        try:
+            child.executeProfile()
+        finally:
+            context.unsubscribe(future)
+
+    def update_step(self, scanned):
+        print("update_step ", scanned)
+        self.registrar.report(scanning.infos.RunProgressInfo(scanned))
 
     @add_call_types
     def on_post_run(self, context: scanning.hooks.AContext, **kwargs) -> None:
